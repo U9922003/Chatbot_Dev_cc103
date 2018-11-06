@@ -1,0 +1,34 @@
+version: '3'                      # Compose file 版本為 3
+services:                         # 定義有哪些服務
+  db:                             # 定義名為 db 的服務
+    image: mysql:5.7              # 使用 mysql:5.7 的 image
+    container_name: chatbot_db    # 將 container 命名為 chatbot_db
+    restart: always               # 不管退出狀態碼是什麼，始终重啟 container
+    ports:                        # 將 container 的 3306 port mapping 到本機的 3306 port 
+        - "3306:3306"
+    environment:                  # 設定環境變數，此處設定 root 的 password
+       - MYSQL_ROOT_PASSWORD
+    volumes:                      # 將 container 的 volume 到本機的 volume
+       - ./mysql_data:/var/lib/mysql   # Host volume:Container volume
+       - ./mysql_init:/docker-entrypoint-initdb.d/
+
+  api:                            # 定義名為 api 的服務
+    build:                        # 使用 build 指定 dockerfile 來建構
+      context: ./dockerfile       # context 指定 dockerfile 位置
+      dockerfile: dockerfile-api2 # 使用名為 dockerfile-jupyter2 的 dockerfile
+    container_name: chatbot_api   # 將 container 命名為 chatbot_api
+    restart: always               # 不管退出狀態碼是什麼，始终重啟 container
+    user: root
+    environment:                  # 設定環境變數，此處設定給予 sudo 權限
+       - GRANT_SUDO=yes
+    ports:
+      - "8880:8888"               # 將 container 的 8888 port mapping 到本機的 8880 port
+      - "5001:5000"               # 將 container 的 5000 port mapping 到本機的 5001 port
+    depends_on:                   # 用來定義 service 之間的相依性
+      - db                        # 當下 docker-compose up 指令時，db service 會先啟動，然後再啟動 api  
+    links:
+      - db
+    volumes:
+      - ./code:/home/jovyan/work/   # 將 container 的 volume 到本機的 volume
+    command:  start-notebook.sh --NotebookApp.token=''    # container 啟動後要執行的命令
+
